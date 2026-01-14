@@ -7,30 +7,25 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 st.title("💰 Personal Finance Forecaster")
 st.write("Forecasting your daily expenses with SARIMA — ready for visualization!")
 
-# 1️⃣ Load Data
 df = pd.read_csv("data/transactions.csv")
 df.columns = df.columns.str.strip().str.lower()
 df.rename(columns={"transaction date":"date", "amount":"amount"}, inplace=True)
 df['date'] = pd.to_datetime(df['date'])
 
-# 2️⃣ Aggregate daily expenses
 daily = df.groupby('date')['amount'].sum().reset_index()
 daily.rename(columns={'amount':'daily_expense'}, inplace=True)
 daily.set_index('date', inplace=True)
 
-# 3️⃣ Sidebar - forecast settings
 st.sidebar.header("Forecast Settings")
 days_to_predict = st.sidebar.slider("Days to Forecast", 7, 90, 30)
 
-# 4️⃣ Train SARIMA
 model = SARIMAX(daily['daily_expense'], order=(1,1,1), seasonal_order=(1,1,1,7))
 results = model.fit()
 forecast = results.get_forecast(steps=days_to_predict)
 
-# 5️⃣ Forecast index
+
 forecast_index = pd.date_range(start=daily.index[-1] + pd.Timedelta(days=1), periods=days_to_predict)
 
-# 6️⃣ Plotting - LinkedIn ready
 sns.set_theme(style="darkgrid")
 fig, ax = plt.subplots(figsize=(14,6))
 
@@ -40,11 +35,20 @@ ax.plot(daily.index[-60:], daily['daily_expense'][-60:], label="Actual", color="
 # Forecast
 ax.plot(forecast_index, forecast.predicted_mean, label="Forecast", color="#ff7f0e", linewidth=2)
 
-# Create three nice columns for the dashboard metrics
+# Create dynamic metrics based on the forecast
 m1, m2, m3 = st.columns(3)
-m1.metric("Algorithm", "SARIMAX")
-m2.metric("Seasonal Period", "7 Days (Weekly)")
-m3.metric("Last Daily Spend", f"${daily['daily_expense'].iloc[-1]:,.2f}")
+
+# 1. Total Projected Spend for the selected period
+total_projected = forecast.predicted_mean.sum()
+m1.metric("Projected Total", f"${total_projected:,.2f}")
+
+# 2. Highest Expected Spike in the forecast
+max_spike = forecast.predicted_mean.max()
+m2.metric("Expected Peak", f"${max_spike:,.2f}")
+
+# 3. Average Daily Forecast
+avg_forecast = forecast.predicted_mean.mean()
+m3.metric("Avg. Forecast", f"${avg_forecast:,.2f}")
 
 st.divider() 
 
@@ -63,3 +67,36 @@ plt.tight_layout()
 
 st.pyplot(fig)
 st.success(f"Forecast for next {days_to_predict} days generated successfully!")
+
+
+
+st.divider() 
+st.subheader("📅 Forecasted Breakdown")
+st.write("Below are the exact predicted values and confidence ranges for the selected period.")
+
+forecast_df = pd.DataFrame({
+    'Date': forecast_index,
+    'Predicted Spend ($)': forecast.predicted_mean.values,
+    'Lower Bound ($)': ci['lower daily_expense'].values,
+    'Upper Bound ($)': ci['upper daily_expense'].values
+})
+
+
+forecast_df['Date'] = forecast_df['Date'].dt.strftime('%Y-%m-%d')
+
+st.dataframe(
+    forecast_df.style.format({
+        'Predicted Spend ($)': '{:,.2f}',
+        'Lower Bound ($)': '{:,.2f}',
+        'Upper Bound ($)': '{:,.2f}'
+    }), 
+    use_container_width=True
+)
+
+csv = forecast_df.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="📥 Download Forecast as CSV",
+    data=csv,
+    file_name='expense_forecast_results.csv',
+    mime='text/csv',
+)
