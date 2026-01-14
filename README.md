@@ -1,7 +1,7 @@
 ***Daily Expense Forecasting: From Statistical Baselines to Seasonal Models***
 
 **Project Overview:**
-This project focuses on predicting daily personal expenditures using time-series econometrics. By moving from a baseline ARIMA to a SARIMA architecture, this study demonstrates the process of identifying seasonal artifacts and handling high-volatility financial data.
+This project focuses on predicting daily personal expenditures using time-series econometrics. By moving from a baseline ARIMA to a SARIMA architecture, this study demonstrates the process of identifying seasonal artifacts and handling high-volatility financial data. The final product is a deployed Streamlit dashboard that provides users with not just a point-estimate forecast, but a probabilistic range using 95% confidence intervals, allowing for better risk-adjusted financial planning.
 
 **Data Engineering & EDA**
 **Source**: Longitudinal daily transaction data (2020–2025).
